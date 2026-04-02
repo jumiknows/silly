@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>The Elevated Avian — Silly Goose Flap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #874e00;
+      --primary-container: #ff9800;
+      --primary-dim: #764400;
+      --secondary: #006b1b;
+      --secondary-container: #cdeecf;
+      --tertiary: #00618f;
+      --tertiary-container: #74c8ff;
+      --surface: #f6f6f6;
+      --surface-low: #eef2f2;
+      --surface-card: #ffffff;
+      --ink: #2d2f2f;
+      --error: #b02500;
+      --soft-shadow: 0 20px 50px rgba(45, 47, 47, 0.08);
+      --card-radius: 34px;
+      --pill-radius: 999px;
+      --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, #eaf7ff 0%, #dfeef9 35%, #edf4f4 100%);
+      color: var(--ink);
+      font-family: "Be Vietnam Pro", system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      padding: 18px;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 520px;
+      position: relative;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 8px 20px;
+      color: var(--primary);
+      user-select: none;
+    }
+
+    .topbar .icon {
+      font-size: 30px;
+      font-weight: 800;
+      width: 52px;
+      text-align: center;
+      transform: rotate(-2deg);
+    }
+
+    .brand {
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.7rem, 5vw, 2.5rem);
+      line-height: 1;
+      letter-spacing: -0.08em;
+      transform: rotate(-2deg);
+      text-align: center;
+      text-shadow: 0 4px 0 rgba(135, 78, 0, 0.08);
+      margin: 0;
+    }
+
+    .meadow {
+      position: absolute;
+      inset: auto -16% -16px -16%;
+      height: 230px;
+      background: #ccefd0;
+      border-top-left-radius: 50% 60%;
+      border-top-right-radius: 50% 60%;
+      z-index: 0;
+    }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .game-shell {
+      position: relative;
+      width: 100%;
+      background: rgba(255,255,255,0.72);
+      border-radius: 42px;
+      padding: 16px;
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .game-frame {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #d4f0ff 0%, #edf9ff 48%, #ddf5cd 49%, #d0edc4 100%);
+      border-radius: 28px;
+      aspect-ratio: 9 / 14;
+      min-height: 420px;
+      max-height: 72vh;
+      box-shadow: inset 0 -16px 40px rgba(0,0,0,0.06);
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .bubble {
+      position: absolute;
+      right: 20px;
+      top: 18px;
+      max-width: 220px;
+      background: var(--tertiary-container);
+      color: #07314a;
+      padding: 16px 18px;
+      border-radius: 30px;
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      line-height: 1.1;
+      transform: rotate(4deg);
+      box-shadow: 0 12px 24px rgba(0, 97, 143, 0.14);
+      z-index: 4;
+    }
+
+    .bubble::after {
+      content: "";
+      position: absolute;
+      left: 54%;
+      bottom: -14px;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 16px solid var(--tertiary-container);
+    }
+
+    .hud {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .score-pill,
+    .mini-pill {
+      background: rgba(255,255,255,0.8);
+      backdrop-filter: blur(8px);
+      border-radius: var(--pill-radius);
+      box-shadow: 0 10px 30px rgba(45,47,47,0.08);
+    }
+
+    .score-pill {
+      padding: 10px 14px;
+      min-width: 92px;
+      text-align: center;
+    }
+
+    .score-label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(45,47,47,0.65);
+      margin-bottom: 2px;
+      font-weight: 700;
+    }
+
+    .score-value {
+      display: block;
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .mini-pill {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: rgba(45,47,47,0.82);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      text-align: center;
+      padding: 30px 22px;
+      background: linear-gradient(180deg, rgba(246,246,246,0.24), rgba(246,246,246,0.06));
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(1.02);
+    }
+
+    .headline {
+      margin: 0;
+      color: var(--primary);
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-size: clamp(2.5rem, 10vw, 4.5rem);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.08em;
+      transform: rotate(-2deg);
+      text-shadow: 0 6px 0 rgba(135,78,0,0.06);
+    }
+
+    .instruction {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 24px;
+      background: rgba(255,255,255,0.85);
+      border-radius: var(--pill-radius);
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-size: clamp(1rem, 3vw, 1.25rem);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      box-shadow: 0 12px 28px rgba(45,47,47,0.08);
+      transform: rotate(1deg);
+      max-width: 92%;
+    }
+
+    .cta {
+      border: 0;
+      cursor: pointer;
+      min-width: min(320px, 86%);
+      padding: 22px 28px;
+      border-radius: 30px;
+      background: var(--primary-container);
+      color: #321d00;
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-size: clamp(1.9rem, 6vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      box-shadow: 0 10px 0 var(--primary-dim);
+      transition: transform 140ms var(--bouncy), box-shadow 140ms ease;
+    }
+
+    .cta:hover,
+    .cta:focus-visible {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .cta:active {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 var(--primary-dim);
+    }
+
+    .subcopy {
+      margin: 0;
+      max-width: 310px;
+      font-size: 0.96rem;
+      color: rgba(45,47,47,0.72);
+      background: rgba(255,255,255,0.68);
+      padding: 10px 14px;
+      border-radius: 18px;
+    }
+
+    .status-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      width: 100%;
+      margin-top: 22px;
+    }
+
+    .status-card {
+      background: rgba(255,255,255,0.74);
+      border-radius: 30px;
+      min-height: 116px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+      box-shadow: 0 16px 34px rgba(45,47,47,0.06);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .status-card .emoji {
+      font-size: 1.9rem;
+      line-height: 1;
+    }
+
+    .bottom-nav {
+      position: relative;
+      z-index: 1;
+      margin-top: 28px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px 18px;
+      background: rgba(255,255,255,0.74);
+      border-radius: 38px 38px 26px 26px;
+      box-shadow: 0 -4px 0 rgba(135,78,0,0.04), 0 20px 42px rgba(45,47,47,0.08);
+    }
+
+    .nav-item {
+      flex: 1;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      color: rgba(45,47,47,0.58);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-weight: 700;
+      padding: 10px 8px;
+      border-radius: 999px;
+    }
+
+    .nav-item.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 6px 0 #5d3600;
+      transform: translateY(-3px);
+    }
+
+    .legend {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: rgba(45,47,47,0.7);
+    }
+
+    .legend strong {
+      color: var(--primary);
+    }
+
+    .hidden-on-start { opacity: 0; }
+
+    @media (max-width: 420px) {
+      body { padding: 12px; }
+      .game-shell { padding: 12px; border-radius: 34px; }
+      .game-frame { border-radius: 24px; min-height: 380px; }
+      .bubble { right: 14px; top: 14px; max-width: 185px; font-size: 0.86rem; }
+      .status-card { min-height: 102px; border-radius: 24px; }
+      .instruction { letter-spacing: 0.08em; padding: 12px 18px; }
+      .cta { min-width: 86%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="icon">☰</div>
+      <h1 class="brand">THE ELEVATED AVIAN</h1>
+      <div class="icon">⚙</div>
+    </div>
+
+    <div class="hero">
+      <div class="game-shell">
+        <div class="game-frame" id="gameFrame">
+          <canvas id="game" width="400" height="640" aria-label="Silly goose flappy bird game"></canvas>
+
+          <div class="hud">
+            <div class="score-pill">
+              <span class="score-label">Honk Rank</span>
+              <span class="score-value" id="scoreValue">0</span>
+            </div>
+            <div class="mini-pill" id="bestValue">Best: 0</div>
+          </div>
+
+          <div class="bubble" id="bubbleText">PREPARE FOR MAXIMUM HONKAGE</div>
+
+          <div class="overlay" id="overlay">
+            <h2 class="headline" id="overlayTitle">GET READY!</h2>
+            <div class="instruction" id="overlayInstruction">Tap to HONK and FLY!</div>
+            <button class="cta" id="startButton">START 🪿</button>
+            <p class="subcopy" id="overlaySubcopy">Avoid the reeds, flap like a professional goose, and try not to bonk.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-card" style="transform: rotate(-1deg);">
+          <div class="emoji">🌿</div>
+          <div>GRASS FEED</div>
+        </div>
+        <div class="status-card" style="transform: rotate(2deg);">
+          <div class="emoji">🌊</div>
+          <div>POND TRIP</div>
+        </div>
+        <div class="status-card" style="transform: rotate(-2deg);">
+          <div class="emoji">🦊</div>
+          <div>NO FOXES</div>
+        </div>
+        <div class="status-card" style="transform: rotate(1deg);">
+          <div class="emoji">🏆</div>
+          <div>HONK RANK</div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <button class="nav-item active"><span>🪿</span><span>Fly</span></button>
+        <button class="nav-item"><span>🥚</span><span>Nest</span></button>
+        <button class="nav-item"><span>🐣</span><span>Flock</span></button>
+      </div>
+
+      <div class="legend">Desktop: <strong>Space</strong> to honk. Mobile: <strong>tap anywhere</strong>.</div>
+    </div>
+
+    <div class="meadow"></div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const overlay = document.getElementById('overlay');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayInstruction = document.getElementById('overlayInstruction');
+      const overlaySubcopy = document.getElementById('overlaySubcopy');
+      const bubble = document.getElementById('bubbleText');
+      const startButton = document.getElementById('startButton');
+      const scoreValue = document.getElementById('scoreValue');
+      const bestValue = document.getElementById('bestValue');
+
+      const W = canvas.width;
+      const H = canvas.height;
+      const groundY = H - 76;
+
+      const state = {
+        running: false,
+        started: false,
+        gameOver: false,
+        score: 0,
+        best: Number(localStorage.getItem('elevated-avian-best') || 0),
+        frame: 0,
+        pipeTimer: 0,
+        goose: {
+          x: 106,
+          y: H / 2 - 20,
+          vy: 0,
+          radius: 17,
+          wing: 0,
+          bob: 0,
+        },
+        pipes: [],
+        particles: [],
+        lastTime: 0,
+      };
+
+      bestValue.textContent = `Best: ${state.best}`;
+
+      function resetGame() {
+        state.running = false;
+        state.started = false;
+        state.gameOver = false;
+        state.score = 0;
+        state.frame = 0;
+        state.pipeTimer = 0;
+        state.pipes = [];
+        state.particles = [];
+        state.goose.y = H / 2 - 20;
+        state.goose.vy = 0;
+        state.goose.wing = 0;
+        state.goose.bob = 0;
+        scoreValue.textContent = '0';
+        bubble.textContent = 'PREPARE FOR MAXIMUM HONKAGE';
+        overlayTitle.textContent = 'GET READY!';
+        overlayInstruction.textContent = 'Tap to HONK and FLY!';
+        overlaySubcopy.textContent = 'Avoid the reeds, flap like a professional goose, and try not to bonk.';
+        startButton.textContent = 'START 🪿';
+        overlay.classList.remove('hidden');
+      }
+
+      function startGame() {
+        if (state.running) return;
+        if (state.gameOver) {
+          resetGame();
+        }
+        state.running = true;
+        state.started = true;
+        state.gameOver = false;
+        overlay.classList.add('hidden');
+        bubble.textContent = 'HONK RESPONSIBLY';
+        flap();
+      }
+
+      function flap() {
+        if (!state.started) return;
+        state.goose.vy = -6.9;
+        state.goose.wing = 1;
+        for (let i = 0; i < 5; i++) {
+          state.particles.push({
+            x: state.goose.x - 12,
+            y: state.goose.y + Math.random() * 12 - 6,
+            vx: -1.2 - Math.random() * 1.6,
+            vy: (Math.random() - 0.5) * 1.6,
+            size: 3 + Math.random() * 3,
+            life: 24 + Math.random() * 12,
+          });
+        }
+      }
+
+      function endGame() {
+        if (state.gameOver) return;
+        state.running = false;
+        state.gameOver = true;
+        state.best = Math.max(state.best, state.score);
+        localStorage.setItem('elevated-avian-best', String(state.best));
+        bestValue.textContent = `Best: ${state.best}`;
+        overlay.classList.remove('hidden');
+        overlayTitle.textContent = 'BONK!';
+        overlayInstruction.textContent = `You honked ${state.score} ${state.score === 1 ? 'time' : 'times'}`;
+        overlaySubcopy.textContent = state.score >= 10
+          ? 'That was suspiciously competent for a goose.'
+          : 'A noble effort. The reeds remain undefeated.';
+        startButton.textContent = 'TRY AGAIN 🪿';
+        bubble.textContent = state.score >= 10 ? 'ELITE HONK ENERGY' : 'REGROUP THE FLOCK';
+      }
+
+      function spawnPipe() {
+        const gap = 158;
+        const minTop = 96;
+        const maxTop = groundY - gap - 96;
+        const topHeight = minTop + Math.random() * (maxTop - minTop);
+        state.pipes.push({
+          x: W + 40,
+          width: 74,
+          gapY: topHeight,
+          gap,
+          scored: false,
+        });
+      }
+
+      function update(dt) {
+        state.frame += dt * 60;
+        state.goose.bob += dt * 4;
+
+        if (!state.running) {
+          state.goose.y = H / 2 - 20 + Math.sin(state.goose.bob) * 8;
+          return;
+        }
+
+        state.pipeTimer += dt;
+        if (state.pipeTimer > 1.4) {
+          state.pipeTimer = 0;
+          spawnPipe();
+        }
+
+        state.goose.vy += 0.34 * dt * 60;
+        state.goose.vy = Math.min(state.goose.vy, 8.5);
+        state.goose.y += state.goose.vy * dt * 60;
+        state.goose.wing = Math.max(0, state.goose.wing - dt * 3.4);
+
+        state.pipes.forEach(pipe => {
+          pipe.x -= 2.8 * dt * 60;
+          if (!pipe.scored && pipe.x + pipe.width < state.goose.x) {
+            pipe.scored = true;
+            state.score += 1;
+            scoreValue.textContent = String(state.score);
+            bubble.textContent = state.score < 5 ? 'SOLID HONKING' : state.score < 10 ? 'GOOSE MODE: LOCKED IN' : 'ABSURDLY MAJESTIC';
+          }
+        });
+
+        state.pipes = state.pipes.filter(pipe => pipe.x + pipe.width > -30);
+
+        state.particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= 1;
+          p.size *= 0.985;
+        });
+        state.particles = state.particles.filter(p => p.life > 0 && p.size > 0.5);
+
+        if (state.goose.y + state.goose.radius > groundY || state.goose.y - state.goose.radius < 0) {
+          endGame();
+        }
+
+        for (const pipe of state.pipes) {
+          const gx = state.goose.x;
+          const gy = state.goose.y;
+          const r = state.goose.radius + 7;
+          const pipeLeft = pipe.x;
+          const pipeRight = pipe.x + pipe.width;
+          const inPipeX = gx + r > pipeLeft && gx - r < pipeRight;
+          const hitTop = gy - r < pipe.gapY;
+          const hitBottom = gy + r > pipe.gapY + pipe.gap;
+          if (inPipeX && (hitTop || hitBottom)) {
+            endGame();
+            break;
+          }
+        }
+      }
+
+      function drawCloud(x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.beginPath();
+        ctx.arc(0, 12, 20, 0, Math.PI * 2);
+        ctx.arc(22, 4, 24, 0, Math.PI * 2);
+        ctx.arc(48, 14, 18, 0, Math.PI * 2);
+        ctx.arc(30, 22, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawBackground() {
+        const sky = ctx.createLinearGradient(0, 0, 0, H);
+        sky.addColorStop(0, '#d5f0ff');
+        sky.addColorStop(0.48, '#effaff');
+        sky.addColorStop(0.481, '#d7f0c9');
+        sky.addColorStop(1, '#cce9b7');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, H);
+
+        drawCloud(38 + Math.sin(state.frame * 0.008) * 6, 66, 0.85);
+        drawCloud(260 - Math.sin(state.frame * 0.006) * 8, 112, 1.1);
+        drawCloud(180 + Math.sin(state.frame * 0.01) * 5, 36, 0.68);
+
+        ctx.fillStyle = '#a7d58d';
+        ctx.beginPath();
+        ctx.moveTo(-50, H - 118);
+        ctx.quadraticCurveTo(72, H - 190, 180, H - 132);
+        ctx.quadraticCurveTo(280, H - 82, W + 40, H - 132);
+        ctx.lineTo(W + 40, H);
+        ctx.lineTo(-50, H);
+        ctx.fill();
+
+        ctx.fillStyle = '#89c56d';
+        ctx.beginPath();
+        ctx.moveTo(-50, H - 90);
+        ctx.quadraticCurveTo(80, H - 148, 190, H - 90);
+        ctx.quadraticCurveTo(310, H - 42, W + 40, H - 96);
+        ctx.lineTo(W + 40, H);
+        ctx.lineTo(-50, H);
+        ctx.fill();
+
+        ctx.fillStyle = '#6eb25e';
+        ctx.fillRect(0, groundY, W, H - groundY);
+
+        for (let i = 0; i < W; i += 18) {
+          const bladeH = 10 + ((i * 13) % 18);
+          ctx.strokeStyle = i % 3 === 0 ? '#3e8d36' : '#4d9d43';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(i, groundY + 18);
+          ctx.quadraticCurveTo(i + 4, groundY + 8 - bladeH / 2, i + 3, groundY + 2);
+          ctx.stroke();
+        }
+      }
+
+      function drawPipe(pipe) {
+        const topHeight = pipe.gapY;
+        const bottomY = pipe.gapY + pipe.gap;
+        const capH = 18;
+        const bodyGradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + pipe.width, 0);
+        bodyGradient.addColorStop(0, '#7acb5c');
+        bodyGradient.addColorStop(1, '#4b9d43');
+
+        ctx.fillStyle = bodyGradient;
+        roundRect(pipe.x, 0, pipe.width, topHeight, 18);
+        ctx.fill();
+        roundRect(pipe.x, bottomY, pipe.width, H - bottomY, 18);
+        ctx.fill();
+
+        ctx.fillStyle = '#95e172';
+        roundRect(pipe.x - 4, topHeight - capH, pipe.width + 8, capH + 4, 16);
+        ctx.fill();
+        roundRect(pipe.x - 4, bottomY - 4, pipe.width + 8, capH + 4, 16);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(pipe.x + 14, 10);
+        ctx.lineTo(pipe.x + 14, topHeight - 10);
+        ctx.moveTo(pipe.x + 14, bottomY + 14);
+        ctx.lineTo(pipe.x + 14, H - 18);
+        ctx.stroke();
+      }
+
+      function drawParticles() {
+        state.particles.forEach(p => {
+          ctx.globalAlpha = Math.max(0, p.life / 36);
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      function drawGoose() {
+        const g = state.goose;
+        const rot = Math.max(-0.65, Math.min(0.65, g.vy * 0.05));
+        const wingLift = Math.sin(state.frame * 0.32 + g.wing * 6) * 6 + g.wing * 12;
+
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        ctx.rotate(rot);
+
+        // shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.beginPath();
+        ctx.ellipse(0, 26, 22, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // body
+        ctx.fillStyle = '#fffef8';
+        ctx.strokeStyle = 'rgba(45,47,47,0.08)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 6, 26, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // tail
+        ctx.beginPath();
+        ctx.moveTo(20, 0);
+        ctx.quadraticCurveTo(33, -8, 28, 12);
+        ctx.quadraticCurveTo(23, 8, 19, 8);
+        ctx.fill();
+
+        // neck
+        ctx.beginPath();
+        ctx.moveTo(-10, -4);
+        ctx.quadraticCurveTo(-18, -34, -4, -48);
+        ctx.quadraticCurveTo(4, -54, 10, -46);
+        ctx.quadraticCurveTo(2, -26, 8, -6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // wing
+        ctx.save();
+        ctx.translate(2, 0);
+        ctx.rotate((-0.3 + wingLift * 0.02));
+        ctx.fillStyle = '#f2f2ea';
+        ctx.beginPath();
+        ctx.ellipse(6, 3, 15, 11, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // head
+        ctx.fillStyle = '#fffef8';
+        ctx.beginPath();
+        ctx.arc(6, -48, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // beak
+        ctx.fillStyle = '#ff9800';
+        ctx.beginPath();
+        ctx.moveTo(15, -48);
+        ctx.lineTo(34, -42);
+        ctx.lineTo(14, -38);
+        ctx.closePath();
+        ctx.fill();
+
+        // eye
+        ctx.fillStyle = '#1c1f1f';
+        ctx.beginPath();
+        ctx.arc(8, -51, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // honk crown if high score in run
+        if (state.score >= 10) {
+          ctx.fillStyle = '#ffcf4d';
+          ctx.beginPath();
+          ctx.moveTo(-4, -66);
+          ctx.lineTo(1, -58);
+          ctx.lineTo(6, -66);
+          ctx.lineTo(11, -58);
+          ctx.lineTo(16, -66);
+          ctx.lineTo(16, -52);
+          ctx.lineTo(-4, -52);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      function drawReadyHint() {
+        if (state.started) return;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.66)';
+        ctx.beginPath();
+        ctx.roundRect(105, 420, 190, 44, 22);
+        ctx.fill();
+        ctx.fillStyle = '#874e00';
+        ctx.font = '700 18px "Plus Jakarta Sans"';
+        ctx.textAlign = 'center';
+        ctx.fillText('Tap anywhere to flap', 200, 448);
+        ctx.restore();
+      }
+
+      function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function draw() {
+        drawBackground();
+        state.pipes.forEach(drawPipe);
+        drawParticles();
+        drawGoose();
+        drawReadyHint();
+      }
+
+      function loop(timestamp) {
+        if (!state.lastTime) state.lastTime = timestamp;
+        const dt = Math.min((timestamp - state.lastTime) / 1000, 0.032);
+        state.lastTime = timestamp;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      function interact() {
+        if (!state.started) {
+          startGame();
+        } else if (state.gameOver) {
+          resetGame();
+        } else {
+          flap();
+        }
+      }
+
+      startButton.addEventListener('click', () => {
+        if (state.gameOver) {
+          resetGame();
+          return;
+        }
+        startGame();
+      });
+
+      window.addEventListener('keydown', (event) => {
+        if (event.code === 'Space' || event.code === 'ArrowUp') {
+          event.preventDefault();
+          interact();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        interact();
+      });
+
+      overlay.addEventListener('pointerdown', (event) => {
+        if (event.target === startButton) return;
+        event.preventDefault();
+        interact();
+      });
+
+      resetGame();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>
