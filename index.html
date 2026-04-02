@@ -169,8 +169,16 @@
       pointer-events: none;
     }
 
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+
     .score-pill,
-    .mini-pill {
+    .mini-pill,
+    .icon-pill {
       background: rgba(255,255,255,0.8);
       backdrop-filter: blur(8px);
       border-radius: var(--pill-radius);
@@ -207,6 +215,32 @@
       font-size: 0.85rem;
       font-weight: 700;
       color: rgba(45,47,47,0.82);
+    }
+
+    .icon-pill {
+      border: 0;
+      cursor: pointer;
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font: inherit;
+      font-size: 1rem;
+      color: rgba(45,47,47,0.82);
+      pointer-events: auto;
+      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+
+    .icon-pill:hover,
+    .icon-pill:focus-visible {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.92);
+      outline: none;
+    }
+
+    .icon-pill[aria-pressed="false"] {
+      color: rgba(45,47,47,0.48);
     }
 
     .overlay {
@@ -372,7 +406,9 @@
       color: var(--primary);
     }
 
-    .hidden-on-start { opacity: 0; }
+    #soundButton {
+      display: none;
+    }
 
     @media (max-width: 420px) {
       body { padding: 12px; }
@@ -403,7 +439,11 @@
               <span class="score-label">Honk Rank</span>
               <span class="score-value" id="scoreValue">0</span>
             </div>
-            <div class="mini-pill" id="bestValue">Best: 0</div>
+
+            <div class="hud-right">
+              <div class="mini-pill" id="bestValue">Best: 0</div>
+              <button class="icon-pill" id="soundButton" type="button" aria-label="Toggle sound" aria-pressed="true" title="Toggle sound">🔊</button>
+            </div>
           </div>
 
           <div class="bubble" id="bubbleText">PREPARE FOR MAXIMUM HONKAGE</div>
@@ -442,11 +482,13 @@
         <button class="nav-item"><span>🐣</span><span>Flock</span></button>
       </div>
 
-      <div class="legend">Desktop: <strong>Space</strong> to honk. Mobile: <strong>tap anywhere</strong>.</div>
+      <div class="legend">Desktop: <strong>Space</strong> to honk. Mobile: <strong>tap anywhere</strong>. Press <strong>M</strong> to mute.</div>
     </div>
 
     <div class="meadow"></div>
   </div>
+
+  <audio id="faaahSound" src="https://www.myinstants.com/media/sounds/faaah.mp3"></audio>
 
   <script>
     (() => {
@@ -460,6 +502,7 @@
       const startButton = document.getElementById('startButton');
       const scoreValue = document.getElementById('scoreValue');
       const bestValue = document.getElementById('bestValue');
+      const soundButton = document.getElementById('soundButton');
 
       const W = canvas.width;
       const H = canvas.height;
@@ -484,9 +527,79 @@
         pipes: [],
         particles: [],
         lastTime: 0,
+        soundEnabled: localStorage.getItem('elevated-avian-sound') !== 'off',
+        audioCtx: null,
       };
 
       bestValue.textContent = `Best: ${state.best}`;
+
+      function syncSoundUI() {
+        soundButton.textContent = state.soundEnabled ? '🔊' : '🔇';
+        soundButton.setAttribute('aria-pressed', String(state.soundEnabled));
+        soundButton.title = state.soundEnabled ? 'Mute sound' : 'Unmute sound';
+      }
+
+      function ensureAudio() {
+        if (!state.soundEnabled) return null;
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return null;
+          if (!state.audioCtx) state.audioCtx = new AudioCtx();
+          if (state.audioCtx.state === 'suspended') {
+            state.audioCtx.resume();
+          }
+          return state.audioCtx;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function playTone({ frequency = 440, frequencyEnd = frequency, type = 'sine', duration = 0.12, volume = 0.05, delay = 0 } = {}) {
+        if (!state.soundEnabled) return;
+        const audioCtx = ensureAudio();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime + delay;
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, now);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, frequencyEnd), now + duration);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        oscillator.start(now);
+        oscillator.stop(now + duration + 0.03);
+      }
+
+      function playFlap() {
+        if (state.soundEnabled) {
+          const faaahSound = document.getElementById('faaahSound');
+          faaahSound.currentTime = 0;
+          faaahSound.play().catch(err => console.log('Audio play failed:', err));
+        }
+      }
+
+      function playScore() {
+        playTone({ frequency: 680, frequencyEnd: 760, type: 'sine', duration: 0.09, volume: 0.04 });
+        playTone({ frequency: 900, frequencyEnd: 980, type: 'sine', duration: 0.12, volume: 0.03, delay: 0.06 });
+      }
+
+      function playCrash() {
+        playTone({ frequency: 240, frequencyEnd: 80, type: 'sawtooth', duration: 0.22, volume: 0.055 });
+        playTone({ frequency: 140, frequencyEnd: 60, type: 'triangle', duration: 0.26, volume: 0.04, delay: 0.02 });
+      }
+
+      function playStart() {
+        playTone({ frequency: 520, frequencyEnd: 620, type: 'triangle', duration: 0.1, volume: 0.035 });
+        playTone({ frequency: 700, frequencyEnd: 860, type: 'triangle', duration: 0.12, volume: 0.03, delay: 0.06 });
+      }
 
       function resetGame() {
         state.running = false;
@@ -515,6 +628,8 @@
         if (state.gameOver) {
           resetGame();
         }
+        ensureAudio();
+        playStart();
         state.running = true;
         state.started = true;
         state.gameOver = false;
@@ -527,6 +642,7 @@
         if (!state.started) return;
         state.goose.vy = -6.9;
         state.goose.wing = 1;
+        playFlap();
         for (let i = 0; i < 5; i++) {
           state.particles.push({
             x: state.goose.x - 12,
@@ -543,6 +659,7 @@
         if (state.gameOver) return;
         state.running = false;
         state.gameOver = true;
+        playCrash();
         state.best = Math.max(state.best, state.score);
         localStorage.setItem('elevated-avian-best', String(state.best));
         bestValue.textContent = `Best: ${state.best}`;
@@ -595,6 +712,7 @@
           if (!pipe.scored && pipe.x + pipe.width < state.goose.x) {
             pipe.scored = true;
             state.score += 1;
+            playScore();
             scoreValue.textContent = String(state.score);
             bubble.textContent = state.score < 5 ? 'SOLID HONKING' : state.score < 10 ? 'GOOSE MODE: LOCKED IN' : 'ABSURDLY MAJESTIC';
           }
@@ -739,13 +857,11 @@
         ctx.translate(g.x, g.y);
         ctx.rotate(rot);
 
-        // shadow
         ctx.fillStyle = 'rgba(0,0,0,0.08)';
         ctx.beginPath();
         ctx.ellipse(0, 26, 22, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // body
         ctx.fillStyle = '#fffef8';
         ctx.strokeStyle = 'rgba(45,47,47,0.08)';
         ctx.lineWidth = 2;
@@ -754,14 +870,12 @@
         ctx.fill();
         ctx.stroke();
 
-        // tail
         ctx.beginPath();
         ctx.moveTo(20, 0);
         ctx.quadraticCurveTo(33, -8, 28, 12);
         ctx.quadraticCurveTo(23, 8, 19, 8);
         ctx.fill();
 
-        // neck
         ctx.beginPath();
         ctx.moveTo(-10, -4);
         ctx.quadraticCurveTo(-18, -34, -4, -48);
@@ -771,7 +885,6 @@
         ctx.fill();
         ctx.stroke();
 
-        // wing
         ctx.save();
         ctx.translate(2, 0);
         ctx.rotate((-0.3 + wingLift * 0.02));
@@ -782,14 +895,12 @@
         ctx.stroke();
         ctx.restore();
 
-        // head
         ctx.fillStyle = '#fffef8';
         ctx.beginPath();
         ctx.arc(6, -48, 12, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // beak
         ctx.fillStyle = '#ff9800';
         ctx.beginPath();
         ctx.moveTo(15, -48);
@@ -798,13 +909,11 @@
         ctx.closePath();
         ctx.fill();
 
-        // eye
         ctx.fillStyle = '#1c1f1f';
         ctx.beginPath();
         ctx.arc(8, -51, 2.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // honk crown if high score in run
         if (state.score >= 10) {
           ctx.fillStyle = '#ffcf4d';
           ctx.beginPath();
@@ -868,6 +977,7 @@
       }
 
       function interact() {
+        ensureAudio();
         if (!state.started) {
           startGame();
         } else if (state.gameOver) {
@@ -878,6 +988,7 @@
       }
 
       startButton.addEventListener('click', () => {
+        ensureAudio();
         if (state.gameOver) {
           resetGame();
           return;
@@ -885,10 +996,32 @@
         startGame();
       });
 
+      soundButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        state.soundEnabled = !state.soundEnabled;
+        localStorage.setItem('elevated-avian-sound', state.soundEnabled ? 'on' : 'off');
+        syncSoundUI();
+        if (state.soundEnabled) {
+          ensureAudio();
+          playTone({ frequency: 720, frequencyEnd: 840, type: 'sine', duration: 0.08, volume: 0.03 });
+        }
+      });
+
       window.addEventListener('keydown', (event) => {
         if (event.code === 'Space' || event.code === 'ArrowUp') {
           event.preventDefault();
           interact();
+        }
+        if (event.code === 'KeyM') {
+          event.preventDefault();
+          state.soundEnabled = !state.soundEnabled;
+          localStorage.setItem('elevated-avian-sound', state.soundEnabled ? 'on' : 'off');
+          syncSoundUI();
+          if (state.soundEnabled) {
+            ensureAudio();
+            playTone({ frequency: 720, frequencyEnd: 840, type: 'sine', duration: 0.08, volume: 0.03 });
+          }
         }
       }, { passive: false });
 
@@ -898,11 +1031,12 @@
       });
 
       overlay.addEventListener('pointerdown', (event) => {
-        if (event.target === startButton) return;
+        if (event.target === startButton || event.target === soundButton) return;
         event.preventDefault();
         interact();
       });
 
+      syncSoundUI();
       resetGame();
       requestAnimationFrame(loop);
     })();
